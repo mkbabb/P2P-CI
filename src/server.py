@@ -5,6 +5,9 @@ from socket import socket
 from typing import *
 import threading
 
+HOSTNAME = sock.gethostname()
+PORT = 7734
+
 
 @dataclass
 class Peer:
@@ -25,8 +28,6 @@ class RFC:
 ACTIVE_PEERS: List[Peer] = []
 ACTIVE_RFCS: List[RFC] = []
 
-HOSTNAME = sock.gethostname()
-PORT = 7734
 
 STATUS_PHRASES = {
     200: "OK",
@@ -156,6 +157,7 @@ def peer_receiver(peer_socket: socket) -> None:
 
 
 def main() -> None:
+
     server_socket = socket(sock.AF_INET, sock.SOCK_STREAM)
     server_socket.bind((HOSTNAME, PORT))
 
