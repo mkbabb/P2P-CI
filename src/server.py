@@ -8,6 +8,22 @@ import threading
 HOSTNAME = sock.gethostname()
 PORT = 7734
 
+DEFAULT_VERSION = "P2P-CI/1.0"
+
+STATUS_PHRASES = {
+    200: "OK",
+    400: "BAD REQUEST",
+    404: "NOT FOUND",
+    505: "P2P-CI VERSION NOT SUPPORTED",
+}
+
+
+def create_message_header(
+    status_code: int, phrase: Optional[str] = None, version: str = DEFAULT_VERSION
+) -> str:
+    phrase = STATUS_PHRASES.get(status_code, phrase)
+    return f"{version} {status_code} {phrase}"
+
 
 @dataclass
 class Peer:
@@ -29,43 +45,11 @@ ACTIVE_PEERS: List[Peer] = []
 ACTIVE_RFCS: List[RFC] = []
 
 
-STATUS_PHRASES = {
-    200: "OK",
-    400: "BAD REQUEST",
-    404: "NOT FOUND",
-    505: "P2P-CI VERSION NOT SUPPORTED",
-}
-
-
-def create_response_message_header(
-    status_code: int, phrase: Optional[str] = None, version: str = "P2P-CI/1.0"
-) -> str:
-    phrase = STATUS_PHRASES.get(status_code, phrase)
-    return f"{version} {status_code} {phrase}"
-
-
 def parse_field(field: str) -> str:
     return field.split(":", 1)[1]
 
 
-@dataclass
-class RequestMessage:
-    method: str
-    rfc_number: int
-    version: str
-
-    hostname: str
-    port: int
-    title: str
-
-    def __repr__(self) -> str:
-        return f"""{self.method} RFC {self.rfc_number} {self.version}
-        Host: {self.hostname}
-        Port: {self.port}
-        Title: {self.title}"""
-
-
-def parse_request_message(response: str) -> RequestMessage:
+def parse_request_message(response: str) -> dict:
     arr = response.split("\n")
 
     method, rfc_number, version = arr[0].split(" ")
@@ -73,7 +57,14 @@ def parse_request_message(response: str) -> RequestMessage:
     port = int(parse_field(arr[2]))
     title = parse_field(arr[3])
 
-    return RequestMessage(method, int(rfc_number), version, hostname, port, title)
+    return dict(
+        method=method,
+        hostname=hostname,
+        port=port,
+        version=version,
+        rfc_number=rfc_number,
+        title=title,
+    )
 
 
 def get_peer(hostname: str, port: int) -> Peer:
@@ -98,31 +89,31 @@ def get_rfcs(rfc_number: int, title: str) -> List[RFC]:
 
 def add_RFC(response: str) -> str:
     request_message = parse_request_message(response)
-    peer = get_peer(request_message.hostname, request_message.port)
+    peer = get_peer(request_message["hostname"], request_message["port"])
 
-    rfc = RFC(request_message.rfc_number, request_message.title, peer)
-    header = create_response_message_header(200)
+    rfc = RFC(request_message["rfc_number"], request_message["title"], peer)
+    header = create_message_header(200)
 
     return f"{header}\n{rfc}"
 
 
 def lookup_RFC(response: str) -> str:
     request_message = parse_request_message(response)
-    rfcs = get_rfcs(request_message.rfc_number, request_message.title)
+    rfcs = get_rfcs(request_message["rfc_number"], request_message["title"])
 
     if len(rfcs) > 0:
-        header = create_response_message_header(200)
+        header = create_message_header(200)
         return f"{header}\n" + "\n".join(map(str, rfcs))
     else:
-        return create_response_message_header(404)
+        return create_message_header(404)
 
 
 def list_rfcs() -> str:
     if len(ACTIVE_RFCS) > 0:
-        header = create_response_message_header(200)
+        header = create_message_header(200)
         return f"{header}\n" + "\n".join(map(str, ACTIVE_RFCS))
     else:
-        return create_response_message_header(404)
+        return create_message_header(404)
 
 
 def peer_receiver(peer_socket: socket) -> None:
@@ -134,7 +125,7 @@ def peer_receiver(peer_socket: socket) -> None:
         elif request_type == "LIST":
             return list_rfcs()
         else:
-            return create_response_message_header(404)
+            return create_message_header(404)
 
     try:
         while True:
