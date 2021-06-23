@@ -148,7 +148,10 @@ def server_receiver(peer_socket: socket) -> None:
 
 def main() -> None:
     server_socket = socket(sock.AF_INET, sock.SOCK_STREAM)
-    server_socket.bind((sock.gethostname(), PORT))
+    address = (sock.gethostname(), PORT)
+    server_socket.bind(address)
+
+    print(f"Started server: {address}")
 
     try:
         while True:
