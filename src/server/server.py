@@ -124,7 +124,7 @@ def server_receiver(peer_socket: socket) -> None:
             return lookup_rfc(response)
         elif request_type == "LISTALL":
             return list_rfcs()
-        return create_status_header(404)
+        return create_status_header(400)
 
     try:
         while True:

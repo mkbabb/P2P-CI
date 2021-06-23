@@ -5,7 +5,7 @@ from src.peer.server import (
     create_response_message,
     create_response_message_header,
     get_os,
-    get_RFC_path,
+    get_rfc_path,
 )
 from src.server import PORT, create_status_header
 
@@ -68,7 +68,7 @@ def get_rfc() -> str:
 
         peer_socket.send(message.encode())
 
-        filepath = get_RFC_path(rfc_number)
+        filepath = get_rfc_path(rfc_number)
 
         with filepath.open("r") as file:
             while (d := peer_socket.recv(1024)) :
