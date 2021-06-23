@@ -7,12 +7,16 @@ import threading
 def main() -> None:
     port = int(input("Enter port: "))
 
-    peer_client_thread = threading.Thread(name="Peer_server_thread", target=peer_client)
+    peer_client_thread = threading.Thread(target=peer_client)
     peer_client_thread.setDaemon(True)
     peer_client_thread.start()
 
     connect_server_thread = threading.Thread(
-        name="server_connect_thread", target=peer_server, args=(port,)
+        target=peer_server,
+        args=(
+            "peer-server-local",
+            port,
+        ),
     )
     connect_server_thread.setDaemon(True)
     connect_server_thread.start()

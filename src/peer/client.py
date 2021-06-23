@@ -51,8 +51,8 @@ def list_rfcs() -> str:
 
 
 def get_rfc() -> str:
-    hostname = input("Enter hostname: ")
-    port = int(input("Enter port: "))
+    hostname = input("Enter peer hostname: ")
+    port = int(input("Enter peer port: "))
     rfc_number = int(input("Enter RFC number: "))
 
     with sock.create_connection((hostname, port)) as peer_socket:

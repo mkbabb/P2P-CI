@@ -4,12 +4,12 @@ import threading
 from dataclasses import dataclass
 from socket import socket
 from typing import *
+from pathlib import Path
 
 
+DATA_PATH = Path("data/")
 PORT = 7734
-
 DEFAULT_VERSION = "P2P-CI/1.0"
-
 STATUS_PHRASES = {
     200: "OK",
     400: "BAD REQUEST",

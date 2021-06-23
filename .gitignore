@@ -3,6 +3,5 @@
 .mypy_cache/
 .env
 auth/
-data/
 __pycache__/
 _*

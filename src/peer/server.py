@@ -8,7 +8,7 @@ from pathlib import Path
 from socket import socket
 from typing import *
 
-from src.server import DEFAULT_VERSION, create_status_header
+from src.server import DATA_PATH, DEFAULT_VERSION, create_status_header
 
 
 def create_response_message(header: str, data: dict) -> str:
@@ -31,7 +31,7 @@ def get_os() -> str:
 
 
 def get_rfc_path(rfc_number: int) -> Path:
-    return Path(f"RFC{rfc_number}.txt")
+    return DATA_PATH.joinpath(Path(f"rfc{rfc_number}.txt"))
 
 
 def get_rfc(peer_socket: socket, response: str) -> str:
@@ -91,9 +91,9 @@ def peer_receiver(peer_socket: socket) -> None:
         sys.exit(0)
 
 
-def peer_server(port: int) -> None:
+def peer_server(hostname: str, port: int) -> None:
     peer_socket = socket(sock.AF_INET, sock.SOCK_STREAM)
-    peer_socket.bind((sock.gethostname(), port))
+    peer_socket.bind((hostname, port))
 
     try:
         while True:
@@ -104,3 +104,12 @@ def peer_server(port: int) -> None:
     except KeyboardInterrupt:
         peer_socket.close()
         sys.exit(0)
+
+
+if __name__ == "__main__":
+    hostname = input("Enter hostname: ")
+    port = int(input("Enter port: "))
+
+    address = (hostname, port)
+
+    peer_server(hostname, port)
