@@ -18,7 +18,7 @@ STATUS_PHRASES = {
 }
 
 
-def create_message_header(
+def create_status_header(
     status_code: int, phrase: Optional[str] = None, version: str = DEFAULT_VERSION
 ) -> str:
     phrase = STATUS_PHRASES.get(status_code, phrase)
@@ -92,7 +92,7 @@ def add_RFC(response: str) -> str:
     peer = get_peer(request_message["hostname"], request_message["port"])
 
     rfc = RFC(request_message["rfc_number"], request_message["title"], peer)
-    header = create_message_header(200)
+    header = create_status_header(200)
 
     return f"{header}\n{rfc}"
 
@@ -102,21 +102,21 @@ def lookup_RFC(response: str) -> str:
     rfcs = get_rfcs(request_message["rfc_number"], request_message["title"])
 
     if len(rfcs) > 0:
-        header = create_message_header(200)
+        header = create_status_header(200)
         return f"{header}\n" + "\n".join(map(str, rfcs))
     else:
-        return create_message_header(404)
+        return create_status_header(404)
 
 
 def list_rfcs() -> str:
     if len(ACTIVE_RFCS) > 0:
-        header = create_message_header(200)
+        header = create_status_header(200)
         return f"{header}\n" + "\n".join(map(str, ACTIVE_RFCS))
     else:
-        return create_message_header(404)
+        return create_status_header(404)
 
 
-def peer_receiver(peer_socket: socket) -> None:
+def server_receiver(peer_socket: socket) -> None:
     def handle(response: str, request_type: str) -> str:
         if request_type == "ADD":
             return add_RFC(response)
@@ -124,8 +124,7 @@ def peer_receiver(peer_socket: socket) -> None:
             return lookup_RFC(response)
         elif request_type == "LIST":
             return list_rfcs()
-        else:
-            return create_message_header(404)
+        return create_status_header(404)
 
     try:
         while True:
@@ -148,16 +147,16 @@ def peer_receiver(peer_socket: socket) -> None:
 
 
 def main() -> None:
-
     server_socket = socket(sock.AF_INET, sock.SOCK_STREAM)
     server_socket.bind((HOSTNAME, PORT))
 
     try:
         while True:
             server_socket.listen(32)
-            peer_socket, _ = server_socket.accept()
-            t = threading.Thread(target=peer_receiver, args=(peer_socket,))
+            conn, _ = server_socket.accept()
+            t = threading.Thread(target=server_receiver, args=(conn,))
             t.start()
+
     except KeyboardInterrupt:
         server_socket.close()
         sys.exit(0)
