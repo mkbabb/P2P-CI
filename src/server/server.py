@@ -18,11 +18,51 @@ STATUS_PHRASES = {
 }
 
 
+HEADER_SIZE = 10
+
+
 def create_status_header(
     status_code: int, phrase: Optional[str] = None, version: str = DEFAULT_VERSION
 ) -> str:
     phrase = STATUS_PHRASES.get(status_code, phrase)
     return f"{version} {status_code} {phrase}"
+
+
+def create_message(data: bytes, header_size: int = HEADER_SIZE) -> bytes:
+    header = f"{len(data):<{header_size}}"
+    return header.encode() + data
+
+
+def parse_message(message: bytes, header_size: int = HEADER_SIZE) -> Tuple[int, bytes]:
+    if len(message) == 0:
+        return 0, message
+    else:
+        message_length = int(message[:header_size].decode())
+        data = message[header_size:]
+        return message_length, data
+
+
+def recv_message(
+    peer_socket: socket, header_size: int = HEADER_SIZE, chunk_size: int = 1024
+) -> bytes:
+    message = b""
+    message_len, _ = parse_message(peer_socket.recv(header_size), header_size)
+
+    while message_len > 0:
+        chunk_size = min(chunk_size, message_len)
+        message_len -= chunk_size
+
+        response = peer_socket.recv(chunk_size)
+        message += response
+
+    return message
+
+
+def send_message(
+    data: bytes, peer_socket: socket, header_size: int = HEADER_SIZE
+) -> int:
+    message = create_message(data, header_size)
+    return peer_socket.send(message)
 
 
 @dataclass(frozen=True)
@@ -128,17 +168,15 @@ def server_receiver(peer_socket: socket) -> None:
         return create_status_header(400)
 
     try:
-        while (response := peer_socket.recv(1024).decode()):
-            print(response, "\n")
+        while True:
+            request = recv_message(peer_socket).decode()
+            print(request, "\n")
 
-            arr = response.split(" ")
+            arr = request.split(" ")
             request_type = arr[0]
 
-            message = handle(response, request_type)
-            print(message, "\n")
-            
-            peer_socket.send(message.encode())
-        peer_socket.close()
+            message = handle(request, request_type)
+            send_message(message.encode(), peer_socket)
 
     except KeyboardInterrupt:
         peer_socket.close()

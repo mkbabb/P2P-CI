@@ -1,5 +1,7 @@
 import socket as sock
 from pathlib import Path
+from src import server
+from src.server.server import recv_message, send_message
 from typing import *
 
 from src.peer.server import (
@@ -71,16 +73,16 @@ def get_rfc() -> None:
         header = create_response_message_header(data)
         message = create_response_message(header, data)
 
-        peer_socket.send(message.encode())
+        send_message(message.encode(), peer_socket)
+        response = recv_message(peer_socket)
 
-        response = peer_socket.recv(1024)
         print(response.decode(), "\n")
 
         filepath = get_rfc_path(rfc_number)
         out_filepath = Path(filepath.name)
 
         with out_filepath.open("w") as file:
-            while (d := peer_socket.recv(1024)) :
+            while (d := recv_message(peer_socket)) :
                 file.write(d.decode())
 
 
@@ -93,7 +95,7 @@ def peer_client() -> None:
         elif option == 3:
             return list_rfcs()
         elif option == 4:
-            return get_rfc()
+            return get_rfc()  # type: ignore
         return create_status_header(400)
 
     # hostname = input("Enter the server hostname: ")
@@ -117,8 +119,8 @@ Select an option:
                 break
             else:
                 if (request := handle(int(option))) is not None:
-                    server_socket.send(request.encode())
-                    response = server_socket.recv(1024)
+                    send_message(request.encode(), server_socket)
+                    response = recv_message(server_socket)
                     print(response.decode(), "\n")
 
 

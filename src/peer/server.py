@@ -1,7 +1,7 @@
 import os
 import platform
 import socket as sock
-from src.server.server import PORT
+from src.server.server import PORT, recv_message, send_message
 import sys
 import threading
 import time
@@ -58,13 +58,14 @@ def get_rfc(peer_socket: socket, response: str) -> str:
             "content-type": "text/text",
         }
         message = create_response_message(header, data)
-        peer_socket.send(message.encode())
+        send_message(message.encode(), peer_socket)
 
         with filepath.open("r") as file:
             while (d := file.read(1024)) :
-                peer_socket.send(d.encode())
-
-    return create_status_header(200)
+                send_message(d.encode(), peer_socket)
+        return create_status_header(200)
+    else:
+        return create_status_header(400)
 
 
 def peer_receiver(peer_socket: socket) -> None:
@@ -74,13 +75,12 @@ def peer_receiver(peer_socket: socket) -> None:
         return create_status_header(400)
 
     try:
-        response = peer_socket.recv(1024).decode()
-        print(response, "\n")
+        request = recv_message(peer_socket).decode()
+        print(request, "\n")
 
-        arr = response.split(" ")
+        arr = request.split(" ")
         request_type = arr[0]
-        message = handle(response, request_type)
-        print(message, "\n")
+        message = handle(request, request_type)
 
         peer_socket.close()
     except KeyboardInterrupt:
