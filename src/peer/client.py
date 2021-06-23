@@ -8,7 +8,13 @@ from src.peer.server import (
     get_os,
     get_rfc_path,
 )
-from src.utils import PORT, create_status_header, recv_message, send_message
+from src.utils import (
+    PORT,
+    create_status_header,
+    print_message,
+    recv_message,
+    send_message,
+)
 
 
 def add_rfc(rfc_number: int, title: str, hostname: str, port: int) -> str:
@@ -63,16 +69,22 @@ def get_rfc(
         message = create_response_message(header, data)
 
         send_message(message.encode(), peer_socket)
-        response = recv_message(peer_socket)
+        response = recv_message(peer_socket).decode()
+        print_message(response, "Response")
 
-        print(response.decode(), "\n")
+        arr = response.split(" ")
+        status = int(arr[1])
 
-        filepath = get_rfc_path(rfc_number)
-        out_filepath = Path(filepath.name)
+        if status == 200:
+            print("Downloading file...")
+            filepath = get_rfc_path(rfc_number)
+            out_filepath = Path(filepath.name)
 
-        with out_filepath.open("w") as file:
-            while (d := recv_message(peer_socket)) :
-                file.write(d.decode())
+            with out_filepath.open("w") as file:
+                while (d := recv_message(peer_socket)) :
+                    file.write(d.decode())
+        else:
+            print("File not found!")
 
 
 def peer_client(hostname: str, port: int) -> None:
@@ -106,14 +118,13 @@ def peer_client(hostname: str, port: int) -> None:
             print(
                 """
 Select an option.
+    P2S:
+    1. Add RFC
+    2. Lookup RFC
+    3. List RFC
 
-P2S:
-1. Add RFC
-2. Lookup RFC
-3. List RFC
-
-P2P:
-4. Download RFC
+    P2P:
+    4. Download RFC
 """
             )
             if (option := input()) == "":
@@ -121,5 +132,5 @@ P2P:
             else:
                 if (request := handle(int(option))) is not None:
                     send_message(request.encode(), server_socket)
-                    response = recv_message(server_socket)
-                    print(response.decode(), "\n")
+                    response = recv_message(server_socket).decode()
+                    print_message(response, "Response")

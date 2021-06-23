@@ -66,3 +66,11 @@ def send_message(
     header = f"{len(data):<{header_size}}"
     message = header.encode() + data
     return peer_socket.send(message)
+
+
+def print_message(message: str, kind: str = "Request") -> None:
+    print("")
+    print(f"****** {kind} ******")
+    print(message)
+    print("*********************")
+    print("")

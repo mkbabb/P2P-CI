@@ -11,6 +11,7 @@ from src.utils import (
     create_status_header,
     get_os,
     get_rfc_path,
+    print_message,
     recv_message,
     send_message,
 )
@@ -59,20 +60,21 @@ def get_rfc(peer_socket: socket, response: str) -> str:
         with filepath.open("r") as file:
             while (d := file.read(1024)) :
                 send_message(d.encode(), peer_socket)
-        return create_status_header(200)
     else:
-        return create_status_header(404)
+        message = create_status_header(404)
+        send_message(message.encode(), peer_socket)
 
 
 def peer_receiver(peer_socket: socket) -> None:
-    def handle(response: str, request_type: str) -> str:
+    def handle(response: str, request_type: str) -> Optional[str]:
         if request_type == "GET":
             return get_rfc(peer_socket, response)
-        return create_status_header(400)
+        else:
+            return create_status_header(400)
 
     try:
         request = recv_message(peer_socket).decode()
-        print(request, "\n")
+        print_message(request)
 
         arr = request.split(" ")
         request_type = arr[0]

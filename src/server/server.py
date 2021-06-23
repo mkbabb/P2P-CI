@@ -4,7 +4,13 @@ import threading
 from dataclasses import dataclass
 from typing import *
 
-from src.utils import create_status_header, recv_message, send_message, PORT
+from src.utils import (
+    create_status_header,
+    print_message,
+    recv_message,
+    send_message,
+    PORT,
+)
 
 
 @dataclass(frozen=True)
@@ -113,7 +119,7 @@ def server_receiver(peer_socket: sock.socket) -> None:
     try:
         while True:
             request = recv_message(peer_socket).decode()
-            print(request, "\n")
+            print_message(request)
 
             arr = request.split(" ")
             request_type = arr[0]
