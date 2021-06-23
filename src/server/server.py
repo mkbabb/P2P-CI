@@ -2,67 +2,9 @@ import socket as sock
 import sys
 import threading
 from dataclasses import dataclass
-from socket import socket
 from typing import *
-from pathlib import Path
 
-
-DATA_PATH = Path("data/")
-PORT = 7734
-DEFAULT_VERSION = "P2P-CI/1.0"
-STATUS_PHRASES = {
-    200: "OK",
-    400: "BAD REQUEST",
-    404: "NOT FOUND",
-    505: "P2P-CI VERSION NOT SUPPORTED",
-}
-
-
-HEADER_SIZE = 10
-
-
-def create_status_header(
-    status_code: int, phrase: Optional[str] = None, version: str = DEFAULT_VERSION
-) -> str:
-    phrase = STATUS_PHRASES.get(status_code, phrase)
-    return f"{version} {status_code} {phrase}"
-
-
-def create_message(data: bytes, header_size: int = HEADER_SIZE) -> bytes:
-    header = f"{len(data):<{header_size}}"
-    return header.encode() + data
-
-
-def parse_message(message: bytes, header_size: int = HEADER_SIZE) -> Tuple[int, bytes]:
-    if len(message) == 0:
-        return 0, message
-    else:
-        message_length = int(message[:header_size].decode())
-        data = message[header_size:]
-        return message_length, data
-
-
-def recv_message(
-    peer_socket: socket, header_size: int = HEADER_SIZE, chunk_size: int = 1024
-) -> bytes:
-    message = b""
-    message_len, _ = parse_message(peer_socket.recv(header_size), header_size)
-
-    while message_len > 0:
-        chunk_size = min(chunk_size, message_len)
-        message_len -= chunk_size
-
-        response = peer_socket.recv(chunk_size)
-        message += response
-
-    return message
-
-
-def send_message(
-    data: bytes, peer_socket: socket, header_size: int = HEADER_SIZE
-) -> int:
-    message = create_message(data, header_size)
-    return peer_socket.send(message)
+from src.utils import create_status_header, recv_message, send_message, PORT
 
 
 @dataclass(frozen=True)
@@ -157,7 +99,7 @@ def list_rfcs() -> str:
         return create_status_header(400)
 
 
-def server_receiver(peer_socket: socket) -> None:
+def server_receiver(peer_socket: sock.socket) -> None:
     def handle(response: str, request_type: str) -> str:
         if request_type == "ADD":
             return add_rfc(response)
@@ -165,7 +107,8 @@ def server_receiver(peer_socket: socket) -> None:
             return lookup_rfc(response)
         elif request_type == "LISTALL":
             return list_rfcs()
-        return create_status_header(400)
+        else:
+            return create_status_header(400)
 
     try:
         while True:
@@ -183,10 +126,10 @@ def server_receiver(peer_socket: socket) -> None:
         sys.exit(0)
 
 
-def main() -> None:
+def server() -> None:
     address = (sock.gethostname(), PORT)
 
-    server_socket = socket(sock.AF_INET, sock.SOCK_STREAM)
+    server_socket = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
     server_socket.bind(address)
     server_socket.listen(32)
 
@@ -203,4 +146,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    server()

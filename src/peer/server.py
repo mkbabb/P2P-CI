@@ -1,15 +1,19 @@
 import os
-import platform
 import socket as sock
-from src.server.server import PORT, recv_message, send_message
 import sys
 import threading
 import time
-from pathlib import Path
 from socket import socket
 from typing import *
 
-from src.server import DATA_PATH, DEFAULT_VERSION, create_status_header
+from src.utils import (
+    DEFAULT_VERSION,
+    create_status_header,
+    get_os,
+    get_rfc_path,
+    recv_message,
+    send_message,
+)
 
 
 def create_response_message(header: str, data: dict) -> str:
@@ -25,14 +29,6 @@ def create_response_message_header(data: dict) -> str:
         header_arr.append(f"RFC {rfc_number}")
     header_arr.append(DEFAULT_VERSION)
     return " ".join(header_arr)
-
-
-def get_os() -> str:
-    return f"{platform.system()} {platform.release()}"
-
-
-def get_rfc_path(rfc_number: int) -> Path:
-    return DATA_PATH.joinpath(Path(f"rfc{rfc_number}.txt"))
 
 
 def get_rfc(peer_socket: socket, response: str) -> str:
@@ -65,7 +61,7 @@ def get_rfc(peer_socket: socket, response: str) -> str:
                 send_message(d.encode(), peer_socket)
         return create_status_header(200)
     else:
-        return create_status_header(400)
+        return create_status_header(404)
 
 
 def peer_receiver(peer_socket: socket) -> None:
@@ -101,15 +97,3 @@ def peer_server(hostname: str, port: int) -> None:
     except KeyboardInterrupt:
         peer_socket.close()
         sys.exit(0)
-
-
-if __name__ == "__main__":
-    # hostname = input("Enter hostname: ")
-    # port = int(input("Enter port: "))
-    hostname = sock.gethostname()
-    port = 1234
-
-    address = (hostname, port)
-    print(f"Started server: {address}")
-
-    peer_server(hostname, port)

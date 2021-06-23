@@ -1,7 +1,5 @@
 import socket as sock
 from pathlib import Path
-from src import server
-from src.server.server import recv_message, send_message
 from typing import *
 
 from src.peer.server import (
@@ -10,57 +8,48 @@ from src.peer.server import (
     get_os,
     get_rfc_path,
 )
-from src.server import PORT, create_status_header
+from src.utils import PORT, create_status_header, recv_message, send_message
 
 
-def add_rfc() -> str:
-    rfc_number = int(input("Enter RFC number: "))
-    title = input("Enter RFC title: ")
-
+def add_rfc(rfc_number: int, title: str, hostname: str, port: int) -> str:
     data = dict(
         method="ADD",
         rfc_number=rfc_number,
-        host=sock.gethostname(),
-        port=PORT,
+        host=hostname,
+        port=port,
         title=title,
     )
     header = create_response_message_header(data)
     return create_response_message(header, data)
 
 
-def lookup_rfc() -> str:
-    rfc_number = input("Enter RFC number: ")
-    title = input("Enter RFC title: ")
-
+def lookup_rfc(rfc_number: int, title: str, hostname: str, port: int) -> str:
     data = dict(
         method="LOOKUP",
         rfc_number=rfc_number,
-        host=sock.gethostname(),
-        port=PORT,
+        host=hostname,
+        port=port,
         title=title,
     )
     header = create_response_message_header(data)
     return create_response_message(header, data)
 
 
-def list_rfcs() -> str:
+def list_rfcs(hostname: str, port: int) -> str:
     data = dict(
         method="LISTALL",
-        host=sock.gethostname(),
-        port=PORT,
+        host=hostname,
+        port=port,
     )
     header = create_response_message_header(data)
     return create_response_message(header, data)
 
 
-def get_rfc() -> None:
-    # hostname = input("Enter peer hostname: ")
-    # port = int(input("Enter peer port: "))
-    # rfc_number = int(input("Enter RFC number: "))
-
-    hostname = sock.gethostname()
-    port = 1234
-    rfc_number = 1
+def get_rfc(
+    hostname: str,
+    port: int,
+    rfc_number: int,
+) -> None:
 
     with sock.create_connection((hostname, port)) as peer_socket:
         data = dict(
@@ -86,32 +75,44 @@ def get_rfc() -> None:
                 file.write(d.decode())
 
 
-def peer_client() -> None:
+def peer_client(hostname: str, port: int) -> None:
     def handle(option: int) -> Optional[str]:
         if option == 1:
-            return add_rfc()
+            rfc_number = int(input("Enter RFC number: "))
+            title = input("Enter RFC title: ")
+
+            return add_rfc(rfc_number, title, hostname, port)
         elif option == 2:
-            return lookup_rfc()
+            rfc_number = int(input("Enter RFC number: "))
+            title = input("Enter RFC title: ")
+
+            return lookup_rfc(rfc_number, title, hostname, port)
         elif option == 3:
-            return list_rfcs()
+            return list_rfcs(hostname, port)
         elif option == 4:
-            return get_rfc()  # type: ignore
+            peer_hostname = input("Enter peer hostname: ")
+            peer_port = int(input("Enter peer port: "))
+            rfc_number = int(input("Enter RFC number: "))
+
+            return get_rfc(peer_hostname, peer_port, rfc_number)  # type: ignore
+
         return create_status_header(400)
 
-    # hostname = input("Enter the server hostname: ")
-    hostname = sock.gethostname()
     address = (hostname, PORT)
-
-    print(f"Started server: {address}")
-
     with sock.create_connection(address) as server_socket:
+        print(f"Connected to server: {address}")
+
         while True:
             print(
                 """
-Select an option:
+Select an option.
+
+P2S:
 1. Add RFC
 2. Lookup RFC
 3. List RFC
+
+P2P:
 4. Download RFC
 """
             )
@@ -122,7 +123,3 @@ Select an option:
                     send_message(request.encode(), server_socket)
                     response = recv_message(server_socket)
                     print(response.decode(), "\n")
-
-
-if __name__ == "__main__":
-    peer_client()

@@ -1,23 +1,20 @@
+import threading
+
 from .client import peer_client
 from .server import peer_server
 
-import threading
-
 
 def main() -> None:
+    hostname = input("Enter hostname: ")
     port = int(input("Enter port: "))
 
-    peer_client_thread = threading.Thread(target=peer_client)
+    address = (hostname, port)
+
+    peer_client_thread = threading.Thread(target=peer_client, args=address)
     peer_client_thread.setDaemon(True)
     peer_client_thread.start()
 
-    connect_server_thread = threading.Thread(
-        target=peer_server,
-        args=(
-            "peer-server-local",
-            port,
-        ),
-    )
+    connect_server_thread = threading.Thread(target=peer_server, args=address)
     connect_server_thread.setDaemon(True)
     connect_server_thread.start()
 
