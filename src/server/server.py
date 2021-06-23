@@ -25,13 +25,16 @@ def create_status_header(
     return f"{version} {status_code} {phrase}"
 
 
-@dataclass
+@dataclass(frozen=True)
 class Peer:
     hostname: str
     port: int
 
+    def __repr__(self) -> str:
+        return f"{self.hostname} {self.port}"
 
-@dataclass
+
+@dataclass(frozen=True)
 class RFC:
     rfc_number: int
     title: str
@@ -41,8 +44,8 @@ class RFC:
         return f"RFC {self.rfc_number} {self.title} {self.peer}"
 
 
-ACTIVE_PEERS: List[Peer] = []
-ACTIVE_RFCS: List[RFC] = []
+ACTIVE_PEERS: Dict[Peer, Peer] = {}
+ACTIVE_RFCS: Dict[RFC, RFC] = {}
 
 
 def parse_field(field: str) -> str:
@@ -52,7 +55,7 @@ def parse_field(field: str) -> str:
 def parse_request_message(response: str) -> dict:
     arr = response.split("\n")
 
-    method, rfc_number, version = arr[0].split(" ")
+    method, _, rfc_number, version = arr[0].split(" ")
     hostname = parse_field(arr[1])
     port = int(parse_field(arr[2]))
     title = parse_field(arr[3])
@@ -69,14 +72,12 @@ def parse_request_message(response: str) -> dict:
 
 def get_peer(hostname: str, port: int) -> Peer:
     peer = Peer(hostname, port)
-    ix = ACTIVE_PEERS.index(peer)
+    return ACTIVE_PEERS.setdefault(peer, peer)
 
-    if ix == -1:
-        ACTIVE_PEERS.append(peer)
-    else:
-        peer = ACTIVE_PEERS[ix]
 
-    return peer
+def get_rfc(rfc_number: int, title: str, peer: Peer) -> RFC:
+    rfc = RFC(rfc_number, title, peer)
+    return ACTIVE_RFCS.setdefault(rfc, rfc)
 
 
 def get_rfcs(rfc_number: int, title: str) -> List[RFC]:
@@ -90,8 +91,8 @@ def get_rfcs(rfc_number: int, title: str) -> List[RFC]:
 def add_rfc(response: str) -> str:
     request_message = parse_request_message(response)
     peer = get_peer(request_message["hostname"], request_message["port"])
+    rfc = get_rfc(request_message["rfc_number"], request_message["title"], peer)
 
-    rfc = RFC(request_message["rfc_number"], request_message["title"], peer)
     header = create_status_header(200)
 
     return f"{header}\n{rfc}"
@@ -105,7 +106,7 @@ def lookup_rfc(response: str) -> str:
         header = create_status_header(200)
         return f"{header}\n" + "\n".join(map(str, rfcs))
     else:
-        return create_status_header(400)
+        return create_status_header(404)
 
 
 def list_rfcs() -> str:
@@ -127,27 +128,17 @@ def server_receiver(peer_socket: socket) -> None:
         return create_status_header(400)
 
     try:
-        while True:
-            response = peer_socket.recv(1024).decode()
-
-            print("SERVER")
-            print("Receiving...\n")
-            print(response)
-
-            if len(response) == 0:
-                peer_socket.close()
-                return
+        while (response := peer_socket.recv(1024).decode()):
+            print(response, "\n")
 
             arr = response.split(" ")
             request_type = arr[0]
 
             message = handle(response, request_type)
-
-            print("SERVER")
-            print("Sending...\n")
-            print(message)
-
+            print(message, "\n")
+            
             peer_socket.send(message.encode())
+        peer_socket.close()
 
     except KeyboardInterrupt:
         peer_socket.close()
@@ -155,19 +146,19 @@ def server_receiver(peer_socket: socket) -> None:
 
 
 def main() -> None:
-    server_socket = socket(sock.AF_INET, sock.SOCK_STREAM)
     address = (sock.gethostname(), PORT)
+
+    server_socket = socket(sock.AF_INET, sock.SOCK_STREAM)
     server_socket.bind(address)
+    server_socket.listen(32)
 
     print(f"Started server: {address}")
 
     try:
         while True:
-            server_socket.listen(32)
             conn, _ = server_socket.accept()
             t = threading.Thread(target=server_receiver, args=(conn,))
             t.start()
-
     except KeyboardInterrupt:
         server_socket.close()
         sys.exit(0)

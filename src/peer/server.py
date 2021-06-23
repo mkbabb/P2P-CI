@@ -1,6 +1,7 @@
 import os
 import platform
 import socket as sock
+from src.server.server import PORT
 import sys
 import threading
 import time
@@ -70,22 +71,18 @@ def peer_receiver(peer_socket: socket) -> None:
     def handle(response: str, request_type: str) -> str:
         if request_type == "GET":
             return get_rfc(peer_socket, response)
-        return create_status_header(404)
+        return create_status_header(400)
 
     try:
-        while True:
-            response = peer_socket.recv(1024).decode()
-            print(response)
+        response = peer_socket.recv(1024).decode()
+        print(response, "\n")
 
-            if len(response) == 0:
-                peer_socket.close()
-                return
+        arr = response.split(" ")
+        request_type = arr[0]
+        message = handle(response, request_type)
+        print(message, "\n")
 
-            arr = response.split(" ")
-            request_type = arr[0]
-
-            message = handle(response, request_type)
-            peer_socket.send(message.encode())
+        peer_socket.close()
     except KeyboardInterrupt:
         peer_socket.close()
         sys.exit(0)
@@ -94,10 +91,10 @@ def peer_receiver(peer_socket: socket) -> None:
 def peer_server(hostname: str, port: int) -> None:
     peer_socket = socket(sock.AF_INET, sock.SOCK_STREAM)
     peer_socket.bind((hostname, port))
+    peer_socket.listen(32)
 
     try:
         while True:
-            peer_socket.listen(8)
             conn, _ = peer_socket.accept()
             t = threading.Thread(target=peer_receiver, args=(conn,))
             t.start()
@@ -107,9 +104,12 @@ def peer_server(hostname: str, port: int) -> None:
 
 
 if __name__ == "__main__":
-    hostname = input("Enter hostname: ")
-    port = int(input("Enter port: "))
+    # hostname = input("Enter hostname: ")
+    # port = int(input("Enter port: "))
+    hostname = sock.gethostname()
+    port = 1234
 
     address = (hostname, port)
+    print(f"Started server: {address}")
 
     peer_server(hostname, port)
