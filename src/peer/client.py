@@ -10,7 +10,7 @@ from src.peer.server import (
 from src.server import PORT, create_status_header
 
 
-def add_RFC() -> str:
+def add_rfc() -> str:
     rfc_number = int(input("Enter RFC number: "))
     title = input("Enter RFC title: ")
 
@@ -25,7 +25,7 @@ def add_RFC() -> str:
     return create_response_message(header, data)
 
 
-def lookup_RFC() -> str:
+def lookup_rfc() -> str:
     rfc_number = input("Enter RFC number: ")
     title = input("Enter RFC title: ")
 
@@ -40,7 +40,7 @@ def lookup_RFC() -> str:
     return create_response_message(header, data)
 
 
-def list_RFCs() -> str:
+def list_rfcs() -> str:
     data = dict(
         method="LISTALL",
         host=sock.gethostname(),
@@ -50,7 +50,7 @@ def list_RFCs() -> str:
     return create_response_message(header, data)
 
 
-def get_RFC() -> str:
+def get_rfc() -> str:
     hostname = input("Enter hostname: ")
     port = int(input("Enter port: "))
     rfc_number = int(input("Enter RFC number: "))
@@ -78,21 +78,22 @@ def get_RFC() -> str:
 
 
 def peer_client() -> None:
+    def handle(option: int) -> str:
+        if option == 1:
+            return add_rfc()
+        elif option == 2:
+            return lookup_rfc()
+        elif option == 3:
+            return list_rfcs()
+        elif option == 4:
+            return get_rfc()
+        return create_status_header(404)
+
     hostname = input("Enter the server hostname: ")
+    address = (hostname, PORT)
+    print(f"Started server: {address}")
 
-    with sock.create_connection((hostname, PORT)) as server_socket:
-
-        def handle(option: int) -> str:
-            if option == 1:
-                return add_RFC()
-            elif option == 2:
-                return lookup_RFC()
-            elif option == 3:
-                return list_RFCs()
-            elif option == 4:
-                return get_RFC()
-            return create_status_header(404)
-
+    with sock.create_connection(address) as server_socket:
         while True:
             print(
                 """Select an option:
@@ -108,8 +109,13 @@ def peer_client() -> None:
             if option == -1:
                 break
 
-            message = handle(option)
-            server_socket.send(message.encode())
+            request = handle(option)
+
+            print("PEER CLIENT")
+            print("Sending...\n")
+            print(request)
+
+            server_socket.send(request.encode())
 
 
 if __name__ == "__main__":

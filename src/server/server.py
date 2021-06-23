@@ -87,7 +87,7 @@ def get_rfcs(rfc_number: int, title: str) -> List[RFC]:
     ]
 
 
-def add_RFC(response: str) -> str:
+def add_rfc(response: str) -> str:
     request_message = parse_request_message(response)
     peer = get_peer(request_message["hostname"], request_message["port"])
 
@@ -97,7 +97,7 @@ def add_RFC(response: str) -> str:
     return f"{header}\n{rfc}"
 
 
-def lookup_RFC(response: str) -> str:
+def lookup_rfc(response: str) -> str:
     request_message = parse_request_message(response)
     rfcs = get_rfcs(request_message["rfc_number"], request_message["title"])
 
@@ -105,7 +105,7 @@ def lookup_RFC(response: str) -> str:
         header = create_status_header(200)
         return f"{header}\n" + "\n".join(map(str, rfcs))
     else:
-        return create_status_header(404)
+        return create_status_header(400)
 
 
 def list_rfcs() -> str:
@@ -113,22 +113,25 @@ def list_rfcs() -> str:
         header = create_status_header(200)
         return f"{header}\n" + "\n".join(map(str, ACTIVE_RFCS))
     else:
-        return create_status_header(404)
+        return create_status_header(400)
 
 
 def server_receiver(peer_socket: socket) -> None:
     def handle(response: str, request_type: str) -> str:
         if request_type == "ADD":
-            return add_RFC(response)
+            return add_rfc(response)
         elif request_type == "LOOKUP":
-            return lookup_RFC(response)
-        elif request_type == "LIST":
+            return lookup_rfc(response)
+        elif request_type == "LISTALL":
             return list_rfcs()
         return create_status_header(404)
 
     try:
         while True:
             response = peer_socket.recv(1024).decode()
+
+            print("SERVER")
+            print("Receiving...\n")
             print(response)
 
             if len(response) == 0:
@@ -139,6 +142,11 @@ def server_receiver(peer_socket: socket) -> None:
             request_type = arr[0]
 
             message = handle(response, request_type)
+
+            print("SERVER")
+            print("Sending...\n")
+            print(message)
+
             peer_socket.send(message.encode())
 
     except KeyboardInterrupt:

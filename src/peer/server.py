@@ -30,15 +30,15 @@ def get_os() -> str:
     return f"{platform.system()} {platform.release()}"
 
 
-def get_RFC_path(rfc_number: int) -> Path:
+def get_rfc_path(rfc_number: int) -> Path:
     return Path(f"RFC{rfc_number}.txt")
 
 
-def get_RFC(peer_socket: socket, response: str) -> str:
+def get_rfc(peer_socket: socket, response: str) -> str:
     TIME_FMT = "%a, %d %b %Y %H:%M:%S"
 
     arr = response.split(" ")
-    filepath = get_RFC_path(int(arr[2]))
+    filepath = get_rfc_path(int(arr[2]))
 
     if filepath.is_file():
         last_modified = (
@@ -69,7 +69,7 @@ def get_RFC(peer_socket: socket, response: str) -> str:
 def peer_receiver(peer_socket: socket) -> None:
     def handle(response: str, request_type: str) -> str:
         if request_type == "GET":
-            return get_RFC(peer_socket, response)
+            return get_rfc(peer_socket, response)
         return create_status_header(404)
 
     try:
