@@ -102,7 +102,7 @@ def list_rfcs() -> str:
         header = create_status_header(200)
         return f"{header}\n" + "\n".join(map(str, ACTIVE_RFCS))
     else:
-        return create_status_header(400)
+        return create_status_header(404)
 
 
 def delete_peer(response: str) -> str:

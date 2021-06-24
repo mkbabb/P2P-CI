@@ -3,7 +3,8 @@
 Simple implementation of a peer-to-peer (P2P) and peer-to-server (P2S) system, utilizing
 a centralized index (CI). In this case, the centralized index supports simple add,
 lookup, and delete operations on [`RFC`](https://www.rfc-editor.org/retrieve/bulk/)
-objects, whereof are defined by a `RFC number` and `RFC title`.
+objects, whereof are defined by a `RFC number`, `RFC title`, and `Peer` (peer object
+from which the RFC was provided).
 
 A main server, housing the centralized index, is defined within
 [`server/server.py`](src/server/server.py). Each peer is composed of two components, a
@@ -39,12 +40,50 @@ following requests are defined:
 Requests from the client are output within the server's process; responses from the
 sever are output within the client's process.
 
+### `ADD`
+
+A peer may add an RFC to the index using this command; input the RFC number and title.
+
+If the RFC exists within the index, nothing is changed (note that RFCs are uniquely
+defined by RFC number, title **and** peer).
+
+### `LOOKUP`
+
+A peer may lookup an RFC from the index using this command; input the RFC number and
+title.
+
+If the RFC doesn't exist within the index, a `404 NOT FOUND` message is returned.
+
+### `LISTALL`
+
+A peer may list all RFCs from the index using this command.
+
+If no RFCs exist in the index, a `404 NOT FOUND` messaged is returned.
+
+### `DEL`
+
+An internal request method, used to delete a peer and all corresponding RFCs from the
+index; input the hostname and port of the peer. A `DEL` request is automatically sent
+when a peer disconnects from the main server.
+
+If the peer doesn't exist within the index, a `404 NOT FOUND` message is returned.
+
 ## P2P
 
-Additionally, peers can communicate with each other using a similar scheme. The
-following requests are defined:
+Additionally, peers can communicate with each other using a similar request-response
+scheme. The following requests are defined:
 
--   `GET`: get an RFC from the opposing peer, downloading the result.
+-   `GET`: get an RFC file from the opposing peer, downloading the result.
+
+### `GET`
+
+A peer may request an RFC to download from another peer. To do so, input the opposing
+peer's **hostname**, **port**, and **RFC number** you wish to download.
+
+By default, the opposing peer's RFC index-folder must be contained within that peer's
+project-level `data/` directory; additionally, each RFC filename therein must be of the
+form `rfc$RFC_NUMBER.txt`, where `$RFC_NUMBER` is the RFC number provided earlier.
+Example RFC path: `data/rfc1.txt`.
 
 ## `utils`
 
