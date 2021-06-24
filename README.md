@@ -15,9 +15,11 @@ client, [`peer/client.py`](src/peer/client.py), and a server,
 Completed as a final project for **CSC 401** at **NCSU**. See the
 [project outline](docs/proj1.pdf) for more information.
 
-## Quick start
+## Quickstart
 
 To run, follow these steps:
+
+**From the base project directory:**
 
 1. Run the main server: `python3 -m src.server.server`
 2. Run the peer client/server: `python3 -m src.peer.peer`
@@ -33,6 +35,9 @@ following requests are defined:
 -   `LOOKUP`: lookup an RFC in the centralized index.
 -   `LISTALL`: list all RFCs in the centralized index.
 -   `DEL`: delete a peer, and all corresponding RFCs, from the centralized index.
+
+Requests from the client are output within the server's process; responses from the
+sever are output within the client's process.
 
 ## P2P
 
