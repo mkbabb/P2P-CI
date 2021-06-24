@@ -36,6 +36,24 @@ ACTIVE_PEERS: Dict[Peer, Peer] = {}
 ACTIVE_RFCS: Dict[RFC, RFC] = {}
 
 
+def get_peer(hostname: str, port: int) -> Peer:
+    peer = Peer(hostname, port)
+    return ACTIVE_PEERS.setdefault(peer, peer)
+
+
+def get_rfc(rfc_number: int, title: str, peer: Peer) -> RFC:
+    rfc = RFC(rfc_number, title, peer)
+    return ACTIVE_RFCS.setdefault(rfc, rfc)
+
+
+def get_rfcs(rfc_number: int, title: str) -> List[RFC]:
+    return [
+        rfc
+        for rfc in ACTIVE_RFCS
+        if rfc.rfc_number == rfc_number and rfc.title == title
+    ]
+
+
 def parse_field(field: str) -> str:
     return field.split(":", 1)[1]
 
@@ -56,24 +74,6 @@ def parse_request_message(response: str) -> dict:
         rfc_number=rfc_number,
         title=title,
     )
-
-
-def get_peer(hostname: str, port: int) -> Peer:
-    peer = Peer(hostname, port)
-    return ACTIVE_PEERS.setdefault(peer, peer)
-
-
-def get_rfc(rfc_number: int, title: str, peer: Peer) -> RFC:
-    rfc = RFC(rfc_number, title, peer)
-    return ACTIVE_RFCS.setdefault(rfc, rfc)
-
-
-def get_rfcs(rfc_number: int, title: str) -> List[RFC]:
-    return [
-        rfc
-        for rfc in ACTIVE_RFCS
-        if rfc.rfc_number == rfc_number and rfc.title == title
-    ]
 
 
 def add_rfc(response: str) -> str:
@@ -105,6 +105,25 @@ def list_rfcs() -> str:
         return create_status_header(400)
 
 
+def delete_peer(response: str) -> str:
+    arr = response.split("\n")
+    hostname = parse_field(arr[1])
+    port = int(parse_field(arr[2]))
+
+    peer = Peer(hostname, port)
+
+    try:
+        ACTIVE_PEERS.pop(peer)
+        rfcs = [rfc for rfc in ACTIVE_RFCS if rfc.peer == peer]
+        for rfc in rfcs:
+            ACTIVE_RFCS.pop(rfc)
+
+        header = create_status_header(200)
+        return f"{header}\n" + f"{peer}\n" + "\n".join(map(str, rfcs))
+    except KeyError:
+        return create_status_header(404)
+
+
 def server_receiver(peer_socket: sock.socket) -> None:
     def handle(response: str, request_type: str) -> str:
         if request_type == "ADD":
@@ -113,12 +132,13 @@ def server_receiver(peer_socket: sock.socket) -> None:
             return lookup_rfc(response)
         elif request_type == "LISTALL":
             return list_rfcs()
+        elif request_type == "DEL":
+            return delete_peer(response)
         else:
             return create_status_header(400)
 
     try:
-        while True:
-            request = recv_message(peer_socket).decode()
+        while (request := recv_message(peer_socket).decode()) :
             print_message(request)
 
             arr = request.split(" ")
@@ -126,10 +146,11 @@ def server_receiver(peer_socket: sock.socket) -> None:
 
             message = handle(request, request_type)
             send_message(message.encode(), peer_socket)
-
     except KeyboardInterrupt:
-        peer_socket.close()
-        sys.exit(0)
+        pass
+
+    peer_socket.close()
+    sys.exit(0)
 
 
 def server() -> None:

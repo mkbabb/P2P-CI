@@ -1,3 +1,5 @@
+import os
+import signal
 import socket as sock
 from pathlib import Path
 from typing import *
@@ -8,13 +10,7 @@ from src.peer.server import (
     get_os,
     get_rfc_path,
 )
-from src.utils import (
-    PORT,
-    create_status_header,
-    print_message,
-    recv_message,
-    send_message,
-)
+from src.utils import PORT, print_message, recv_message, send_message
 
 
 def add_rfc(rfc_number: int, title: str, hostname: str, port: int) -> str:
@@ -44,6 +40,16 @@ def lookup_rfc(rfc_number: int, title: str, hostname: str, port: int) -> str:
 def list_rfcs(hostname: str, port: int) -> str:
     data = dict(
         method="LISTALL",
+        host=hostname,
+        port=port,
+    )
+    header = create_response_message_header(data)
+    return create_response_message(header, data)
+
+
+def delete_peer(hostname: str, port: int) -> str:
+    data = dict(
+        method="DEL",
         host=hostname,
         port=port,
     )
@@ -105,19 +111,20 @@ def peer_client(hostname: str, port: int) -> None:
             peer_hostname = input("Enter peer hostname: ")
             peer_port = int(input("Enter peer port: "))
             rfc_number = int(input("Enter RFC number: "))
+            get_rfc(peer_hostname, peer_port, rfc_number)
+        elif option == -1:
+            return delete_peer(hostname, port)
 
-            return get_rfc(peer_hostname, peer_port, rfc_number)  # type: ignore
-
-        return create_status_header(400)
+        return None
 
     address = (hostname, PORT)
     with sock.create_connection(address) as server_socket:
         print(f"Connected to server: {address}")
+        print("Select an option (press enter to disconnect & exit).")
 
         while True:
             print(
                 """
-Select an option.
     P2S:
     1. Add RFC
     2. Lookup RFC
@@ -127,10 +134,14 @@ Select an option.
     4. Download RFC
 """
             )
-            if (option := input()) == "":
-                break
-            else:
-                if (request := handle(int(option))) is not None:
-                    send_message(request.encode(), server_socket)
-                    response = recv_message(server_socket).decode()
-                    print_message(response, "Response")
+            toption = input()
+            option = int(toption) if toption != "" else -1
+
+            if (request := handle(option)) is not None:
+                send_message(request.encode(), server_socket)
+                response = recv_message(server_socket).decode()
+                print_message(response, "Response")
+
+            if option == -1:
+                os.kill(os.getpid(), signal.SIGINT)
+                return

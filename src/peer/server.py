@@ -32,7 +32,7 @@ def create_response_message_header(data: dict) -> str:
     return " ".join(header_arr)
 
 
-def get_rfc(peer_socket: socket, response: str) -> str:
+def get_rfc(peer_socket: socket, response: str) -> None:
     TIME_FMT = "%a, %d %b %Y %H:%M:%S"
 
     arr = response.split(" ")
@@ -68,7 +68,7 @@ def get_rfc(peer_socket: socket, response: str) -> str:
 def peer_receiver(peer_socket: socket) -> None:
     def handle(response: str, request_type: str) -> Optional[str]:
         if request_type == "GET":
-            return get_rfc(peer_socket, response)
+            return get_rfc(peer_socket, response)  # type: ignore
         else:
             return create_status_header(400)
 
@@ -79,11 +79,11 @@ def peer_receiver(peer_socket: socket) -> None:
         arr = request.split(" ")
         request_type = arr[0]
         message = handle(request, request_type)
-
-        peer_socket.close()
     except KeyboardInterrupt:
-        peer_socket.close()
-        sys.exit(0)
+        pass
+
+    peer_socket.close()
+    sys.exit(0)
 
 
 def peer_server(hostname: str, port: int) -> None:

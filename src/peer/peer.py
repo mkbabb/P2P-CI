@@ -1,7 +1,7 @@
 import threading
 
-from .client import peer_client
-from .server import peer_server
+from src.peer.client import peer_client
+from src.peer.server import peer_server
 
 
 def main() -> None:
@@ -23,4 +23,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
